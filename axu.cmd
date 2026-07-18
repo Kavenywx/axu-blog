@@ -63,8 +63,14 @@ goto MENU
 
 :ADMIN
 echo 启动管理后台...
+start "BlogAdmin" /min node admin/server.js
+timeout /t 2 >nul
 start http://localhost:3000
-node admin/server.js
+echo.
+echo 管理后台已启动: http://localhost:3000
+echo 按任意键停止后台服务...
+pause >nul
+taskkill /fi "WINDOWTITLE eq BlogAdmin*" /f >nul 2>&1
 goto MENU
 
 :EXPLORER
