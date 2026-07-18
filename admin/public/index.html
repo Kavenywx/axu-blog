@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>博客管理后台</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; height: 100vh; display: flex; background: #f0f2f5; color: #333; }
+
+/* Sidebar */
+.sidebar { width: 320px; min-width: 320px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid #e0e0e0; }
+.sidebar-header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.sidebar-header .subtitle { font-size: 12px; color: #999; margin-top: 4px; }
+.sidebar-actions { padding: 12px; display: flex; gap: 8px; }
+.sidebar-actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.btn-new { background: #1a73e8; color: #fff; }
+.btn-new:hover { background: #1557b0; }
+.btn-publish { background: #34a853; color: #fff; }
+.btn-publish:hover { background: #2d9249; }
+.btn-publish:disabled { background: #ccc; cursor: not-allowed; }
+.post-list { flex: 1; overflow-y: auto; }
+.post-item { padding: 14px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+.post-item:hover { background: #f5f7fa; }
+.post-item.active { background: #e8f0fe; border-left: 3px solid #1a73e8; }
+.post-item .post-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.post-item .post-meta { font-size: 12px; color: #999; display: flex; gap: 8px; }
+.post-item .post-meta .tag { background: #e8f0fe; color: #1a73e8; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+.post-item .post-actions { float: right; opacity: 0; transition: opacity 0.2s; }
+.post-item:hover .post-actions { opacity: 1; }
+.post-item .post-actions button { background: none; border: none; cursor: pointer; color: #999; padding: 2px 4px; }
+.post-item .post-actions button:hover { color: #e74c3c; }
+.empty-state { padding: 40px 20px; text-align: center; color: #999; font-size: 14px; }
+
+/* Editor */
+.editor { flex: 1; display: flex; flex-direction: column; padding: 0; }
+.editor-header { padding: 16px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; }
+.editor-header .file-name { font-size: 13px; color: #999; }
+.editor-header .btn-group { display: flex; gap: 8px; }
+.editor-header button { padding: 6px 14px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+.editor-header button:hover { background: #f5f5f5; }
+.editor-header .btn-save { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.editor-header .btn-save:hover { background: #1557b0; }
+.editor-body { flex: 1; display: flex; }
+.editor-pane { flex: 1; display: flex; flex-direction: column; }
+.editor-pane textarea { flex: 1; border: none; padding: 20px; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 1.6; resize: none; outline: none; }
+.preview-pane { flex: 1; padding: 20px; overflow-y: auto; background: #fff; border-left: 1px solid #e0e0e0; }
+.preview-pane h1 { font-size: 24px; margin-bottom: 16px; }
+.preview-pane h2 { font-size: 20px; margin: 20px 0 10px; }
+.preview-pane p { margin-bottom: 12px; line-height: 1.8; }
+.preview-pane code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+.preview-pane pre { background: #f5f5f5; padding: 16px; border-radius: 6px; overflow-x: auto; margin-bottom: 12px; }
+.preview-pane pre code { padding: 0; background: none; }
+.preview-pane img { max-width: 100%; border-radius: 4px; }
+.preview-pane blockquote { border-left: 4px solid #1a73e8; padding-left: 16px; color: #666; margin-bottom: 12px; }
+.preview-pane ul, .preview-pane ol { padding-left: 24px; margin-bottom: 12px; }
+.preview-pane li { margin-bottom: 4px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 30px; right: 30px; padding: 12px 24px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 999; animation: slideUp 0.3s ease; }
+.toast.success { background: #34a853; }
+.toast.error { background: #e74c3c; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: #fff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+.modal h2 { font-size: 18px; margin-bottom: 16px; }
+.modal input { width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; }
+.modal input:focus { border-color: #1a73e8; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-actions button { padding: 8px 20px; border-radius: 6px; border: 1px solid #d0d0d0; cursor: pointer; font-size: 14px; }
+.modal-actions .btn-primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.modal-actions .btn-primary:hover { background: #1557b0; }
+
+.hidden { display: none !important; }
+.status-bar { padding: 8px 20px; background: #f8f9fa; border-top: 1px solid #e0e0e0; font-size: 12px; color: #999; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><i class="fas fa-feather-alt"></i> 阿旭的博客</h1>
+    <div class="subtitle">文章管理后台</div>
+  </div>
+  <div class="sidebar-actions">
+    <button class="btn-new" onclick="showNewModal()"><i class="fas fa-plus"></i> 新文章</button>
+    <button class="btn-publish" id="publishBtn" onclick="publish()"><i class="fas fa-upload"></i> 发布</button>
+  </div>
+  <div class="post-list" id="postList"></div>
+</div>
+
+<div class="editor">
+  <div class="editor-header">
+    <div>
+      <span id="editorTitle" style="font-weight:500;">选择一篇文章开始编辑</span>
+      <div class="file-name" id="editorFile"></div>
+    </div>
+    <div class="btn-group">
+      <button onclick="refreshList()"><i class="fas fa-sync-alt"></i> 刷新</button>
+      <button class="btn-save" id="saveBtn" onclick="savePost()" disabled><i class="fas fa-save"></i> 保存</button>
+    </div>
+  </div>
+  <div class="editor-body">
+    <div class="editor-pane">
+      <textarea id="editor" placeholder="选择或创建一篇文章开始编辑..." oninput="onEdit()"></textarea>
+    </div>
+    <div class="preview-pane" id="preview">
+      <div style="color:#999;text-align:center;margin-top:100px;">预览区域<br>编辑内容后自动渲染</div>
+    </div>
+  </div>
+  <div class="status-bar">
+    <span id="wordCount">字数: 0</span>
+    <span id="saveStatus">就绪</span>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="newModal">
+  <div class="modal">
+    <h2>写新文章</h2>
+    <input type="text" id="newTitle" placeholder="输入文章标题..." autofocus>
+    <div class="modal-actions">
+      <button onclick="closeNewModal()">取消</button>
+      <button class="btn-primary" onclick="createPost()">创建</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+<script>
+let currentFile = null;
+let currentContent = '';
+let isDirty = false;
+
+async function api(method, url, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+async function refreshList() {
+  const posts = await api('GET', '/api/posts');
+  const list = document.getElementById('postList');
+  list.innerHTML = posts.length ? '' : '<div class="empty-state"><i class="fas fa-folder-open" style="font-size:32px;display:block;margin-bottom:12px;"></i>还没有文章，点击左上角「新文章」创建</div>';
+  posts.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'post-item' + (p.file === currentFile ? ' active' : '');
+    div.innerHTML = `
+      <div class="post-actions">
+        <button onclick="event.stopPropagation();deletePost('${p.file}')" title="删除"><i class="fas fa-trash"></i></button>
+      </div>
+      <div class="post-title">${p.title}</div>
+      <div class="post-meta">
+        <span>${p.date?.split(' ')[0] || ''}</span>
+        ${(p.tags||[]).filter(Boolean).map(t => `<span class="tag">${t}</span>`).join('')}
+      </div>`;
+    div.onclick = () => loadPost(p.file);
+    list.appendChild(div);
+  });
+}
+
+async function loadPost(file) {
+  if (isDirty && !confirm('当前文章未保存，确定切换吗？')) return;
+  const res = await api('GET', `/api/posts/${file}`);
+  if (res.error) return toast(res.error, 'error');
+  currentFile = file;
+  currentContent = res.content;
+  document.getElementById('editor').value = res.content;
+  document.getElementById('saveBtn').disabled = false;
+  isDirty = false;
+  document.getElementById('saveStatus').textContent = '已保存';
+  renderPreview();
+  updateMeta();
+  document.querySelectorAll('.post-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.post-item:nth-child(${Array.from(document.querySelectorAll('.post-item')).findIndex(el => el.textContent.includes(file)) + 1})`)?.classList.add('active');
+}
+
+function savePost() {
+  if (!currentFile) return;
+  const content = document.getElementById('editor').value;
+  api('PUT', `/api/posts/${currentFile}`, { content });
+  isDirty = false;
+  document.getElementById('saveStatus').textContent = '已保存';
+  toast('保存成功');
+  refreshList();
+}
+
+function onEdit() {
+  isDirty = true;
+  document.getElementById('saveStatus').textContent = '未保存';
+  renderPreview();
+  updateMeta();
+}
+
+function renderPreview() {
+  const text = document.getElementById('editor').value;
+  const html = marked.parse(text);
+  document.getElementById('preview').innerHTML = html;
+}
+
+function updateMeta() {
+  const text = document.getElementById('editor').value;
+  document.getElementById('wordCount').textContent = `字数: ${text.length} | 行数: ${text.split('\n').length}`;
+  const title = text.match(/^title:\s*(.+)/m)?.[1]?.trim() || '未命名';
+  document.getElementById('editorTitle').textContent = title;
+  document.getElementById('editorFile').textContent = currentFile ? `📄 ${currentFile}` : '';
+}
+
+function showNewModal() {
+  document.getElementById('newModal').classList.remove('hidden');
+  document.getElementById('newTitle').value = '';
+  document.getElementById('newTitle').focus();
+}
+function closeNewModal() {
+  document.getElementById('newModal').classList.add('hidden');
+}
+
+async function createPost() {
+  const title = document.getElementById('newTitle').value.trim();
+  if (!title) return toast('请输入标题', 'error');
+  const content = document.getElementById('editor').value;
+  const res = await api('POST', '/api/posts', { title, content: '' });
+  if (res.error) return toast(res.error, 'error');
+  closeNewModal();
+  toast('文章已创建，开始编辑吧！');
+  refreshList();
+  loadPost(res.file);
+}
+
+async function deletePost(file) {
+  if (!confirm(`确定删除「${file}」吗？`)) return;
+  await api('DELETE', `/api/posts/${file}`);
+  toast('已删除');
+  if (currentFile === file) { currentFile = null; document.getElementById('editor').value = ''; document.getElementById('preview').innerHTML = '<div style="color:#999;text-align:center;margin-top:100px;">选择一篇文章开始编辑</div>'; document.getElementById('saveBtn').disabled = true; updateMeta(); }
+  refreshList();
+}
+
+async function publish() {
+  const btn = document.getElementById('publishBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发布中...';
+  const res = await api('POST', '/api/publish');
+  if (res.success) { toast('发布成功！🎉'); }
+  else { toast('发布失败: ' + (res.error || '未知错误'), 'error'); }
+  btn.disabled = false; btn.innerHTML = '<i class="fas fa-upload"></i> 发布';
+}
+
+refreshList();
+</script>
+</body>
+</html>
