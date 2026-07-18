@@ -13,17 +13,19 @@ echo  1. 写新文章
 echo  2. 编辑已有文章
 echo  3. 本地预览
 echo  4. 发布到 GitHub
-echo  5. 打开文章文件夹
-echo  6. 退出
+echo  5. 打开管理后台 (浏览器编辑)
+echo  6. 打开文章文件夹
+echo  7. 退出
 echo.
-set /p choice="请选择 (1-6): "
+set /p choice="请选择 (1-7): "
 
 if "%choice%"=="1" goto NEW
 if "%choice%"=="2" goto EDIT
 if "%choice%"=="3" goto SERVER
 if "%choice%"=="4" goto PUBLISH
-if "%choice%"=="5" goto EXPLORER
-if "%choice%"=="6" goto EXIT
+if "%choice%"=="5" goto ADMIN
+if "%choice%"=="6" goto EXPLORER
+if "%choice%"=="7" goto EXIT
 goto MENU
 
 :NEW
@@ -57,6 +59,12 @@ if %errorlevel% equ 0 (
     echo 发布失败，请检查错误信息 ❌
 )
 pause
+goto MENU
+
+:ADMIN
+echo 启动管理后台...
+start http://localhost:3000
+node admin/server.js
 goto MENU
 
 :EXPLORER
